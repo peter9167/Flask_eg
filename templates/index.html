@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: url("{{ url_for('static', filename='stadium_background.png') }}");
+            background-size: cover;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+
+        .scoreboard {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -20%);
+            background-color: rgba(0, 0, 0, 0.5); 
+            border: 5px solid #00FF00;
+            width: 60%;
+            height: 40%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .score {
+            font-size: 300px;
+            color: #00FF00;
+        }
+
+        /* girl 캐릭터 크기 및 위치 조정 */
+        .girl-standby {
+            width: 200px;
+        }
+
+        .girl-smile {
+            width: 360px;
+        }
+
+        .girl-character {
+            position: absolute;
+            bottom: 10%;
+            left: 10%;
+        }
+
+        /* man 캐릭터 크기 및 위치 조정 */
+        .man-standby {
+            width: 235px;
+        }
+
+        .man-smile {
+            width: 405px;
+        }
+
+        .man-character {
+            position: absolute;
+            bottom: 10%;
+            right: 10%;
+        }
+    </style>
+</head>
+<body onclick="enableAudio();">
+
+    <!-- 점수판 -->
+    <div class="scoreboard">
+        <div id="score" class="score">0</div>
+    </div>
+
+    <!-- 캐릭터 이미지 -->
+    <img id="girlCharacter" src="{{ url_for('static', filename='girl_standby.png') }}" class="girl-character girl-standby" alt="Girl Character">
+    <img id="manCharacter" src="{{ url_for('static', filename='man_standby.png') }}" class="man-character man-standby" alt="Man Character">
+
+    <!-- 음성 파일 -->
+    <audio id="speechSound" src="{{ url_for('static', filename='speech.mp3') }}"></audio>
+
+    <script>
+        let currentScore = 0;
+        let debounceTimeout = null;
+        const DEBOUNCE_DELAY = 1000;
+
+        // 사용자 상호작용 후 오디오 재생 가능하게 설정
+        function enableAudio() {
+            const sound = document.getElementById("speechSound");
+            sound.play(); 
+            sound.pause(); 
+        }
+
+        // Flask 서버에서 센서 값을 가져오는 함수
+        function fetchSensorValue() {
+            fetch('/get_sensor')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.sensor_value !== undefined && data.sensor_value > currentScore) {
+                        if (!debounceTimeout) {
+                            currentScore = data.sensor_value;
+                            document.getElementById("score").innerHTML = currentScore;
+
+                            // girl 캐릭터 이미지를 smile로 변경
+                            document.getElementById("girlCharacter").src = "{{ url_for('static', filename='girl_smile.png') }}";
+                            document.getElementById("girlCharacter").className = "girl-character girl-smile";
+
+                            // man 캐릭터 이미지를 smile로 변경
+                            document.getElementById("manCharacter").src = "{{ url_for('static', filename='man_smile.png') }}";
+                            document.getElementById("manCharacter").className = "man-character man-smile";
+
+                            // 음성 파일 재생
+                            document.getElementById("speechSound").play();
+
+                            // 디바운스 타이머 설정
+                            debounceTimeout = setTimeout(() => {
+                                document.getElementById("girlCharacter").src = "{{ url_for('static', filename='girl_standby.png') }}";
+                                document.getElementById("girlCharacter").className = "girl-character girl-standby";
+
+                                document.getElementById("manCharacter").src = "{{ url_for('static', filename='man_standby.png') }}";
+                                document.getElementById("manCharacter").className = "man-character man-standby";
+                                
+                                debounceTimeout = null;
+                            }, DEBOUNCE_DELAY);
+                        }
+                    }
+                });
+        }
+
+        // 1초마다 센서 값을 가져와 점수판 및 캐릭터 업데이트
+        setInterval(fetchSensorValue, 1000);
+    </script>
+
+</body>
+</html>
